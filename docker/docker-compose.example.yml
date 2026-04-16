@@ -1,0 +1,96 @@
+services:
+  # Flagship MOSS-TTS (8B) — zero-shot cloning + reference-free TTS.
+  moss-tts:
+    image: ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./voices:/voices:ro
+      - ./hf_cache:/root/.cache/huggingface
+    environment:
+      MOSS_VARIANT: "tts"
+      MOSS_DEVICE: "cuda"
+      MOSS_DTYPE: "bfloat16"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # MOSS-TTSD (8B) — multi-speaker dialogue.
+  moss-ttsd:
+    image: ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./voices:/voices:ro
+      - ./hf_cache:/root/.cache/huggingface
+    environment:
+      MOSS_VARIANT: "ttsd"
+      MOSS_DEVICE: "cuda"
+      MOSS_DTYPE: "bfloat16"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # MOSS-VoiceGenerator (1.7B) — text-prompted voice design.
+  moss-voicegen:
+    image: ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./hf_cache:/root/.cache/huggingface
+    environment:
+      MOSS_VARIANT: "voicegen"
+      MOSS_DEVICE: "cuda"
+      MOSS_DTYPE: "bfloat16"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # MOSS-SoundEffect (8B) — ambient sound effect generation.
+  moss-sfx:
+    image: ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./hf_cache:/root/.cache/huggingface
+    environment:
+      MOSS_VARIANT: "sfx"
+      MOSS_DEVICE: "cuda"
+      MOSS_DTYPE: "bfloat16"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # CPU image — use the 1.7B MossTTSLocal checkpoint, which is the only TTS
+  # model small enough to run on CPU without being painful. `MOSS_VARIANT=tts`
+  # works against both the 8B Delay checkpoint and the 1.7B Local checkpoint.
+  moss-tts-local-cpu:
+    image: ghcr.io/seancheung/moss-openai-tts-api:latest
+    ports:
+      - "8010:8000"
+    volumes:
+      - ./voices:/voices:ro
+      - ./hf_cache:/root/.cache/huggingface
+    environment:
+      MOSS_VARIANT: "tts"
+      MOSS_MODEL: "OpenMOSS-Team/MOSS-TTS-Local-Transformer"
+      MOSS_DEVICE: "cpu"
+      MOSS_DTYPE: "float32"
+      # Optional: trade fidelity for speed with lower RVQ depth (Local-only).
+      MOSS_N_VQ_FOR_INFERENCE: "16"
