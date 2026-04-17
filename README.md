@@ -128,6 +128,21 @@ List all usable voices (reads from `MOSS_VOICES_DIR`, available for every varian
 curl -s http://localhost:8000/v1/audio/voices | jq
 ```
 
+Response:
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "alice",
+      "preview_url": "http://localhost:8000/v1/audio/voices/preview?id=alice",
+      "prompt_text": "Hello, this is a reference audio sample."
+    }
+  ]
+}
+```
+
 ### GET `/v1/audio/voices/preview?id={id}`
 
 Returns the raw reference wav (`audio/wav`), suitable for a browser `<audio>` element.
@@ -325,7 +340,6 @@ docker buildx build -f docker/Dockerfile.cpu \
 │   └── docker-compose.example.yml
 ├── .github/workflows/
 │   └── build-images.yml        # cuda + cpu matrix build
-├── voices/                     # mounted at runtime
 └── README.md
 ```
 

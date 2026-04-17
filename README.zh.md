@@ -128,6 +128,21 @@ docker run --rm -p 8010:8000 \
 curl -s http://localhost:8000/v1/audio/voices | jq
 ```
 
+返回：
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "alice",
+      "preview_url": "http://localhost:8000/v1/audio/voices/preview?id=alice",
+      "prompt_text": "你好，这是一段参考音频。"
+    }
+  ]
+}
+```
+
 ### GET `/v1/audio/voices/preview?id={id}`
 
 返回参考音频本体（`audio/wav`），可用于浏览器 `<audio>` 试听。
@@ -325,7 +340,6 @@ docker buildx build -f docker/Dockerfile.cpu \
 │   └── docker-compose.example.yml
 ├── .github/workflows/
 │   └── build-images.yml        # cuda + cpu 矩阵构建
-├── voices/                     # 运行时挂载
 └── README.md
 ```
 
