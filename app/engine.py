@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -39,18 +38,17 @@ class TTSEngine:
             self.dtype = torch.float32
         self.attn_impl = settings.resolved_attn_impl(self.device, self.dtype)
 
-        if settings.moss_cache_dir:
-            os.environ.setdefault("HF_HOME", settings.moss_cache_dir)
-
         log.info(
             "loading MOSS variant=%s model=%s device=%s dtype=%s attn=%s",
             self.variant, self.model_id, self.device, self.dtype, self.attn_impl,
         )
 
+        # MOSS-TTS' remote-code processors reject cache_dir kwargs; the cache
+        # location must be steered via HF_HOME before transformers is imported
+        # (the entrypoint maps MOSS_CACHE_DIR -> HF_HOME for that reason).
         self.processor = AutoProcessor.from_pretrained(
             self.model_id,
             trust_remote_code=True,
-            cache_dir=settings.moss_cache_dir,
         )
         self.processor.audio_tokenizer = self.processor.audio_tokenizer.to(self.device)
 
@@ -59,7 +57,6 @@ class TTSEngine:
             trust_remote_code=True,
             attn_implementation=self.attn_impl,
             torch_dtype=self.dtype,
-            cache_dir=settings.moss_cache_dir,
         ).to(self.device)
         self.model.eval()
 
