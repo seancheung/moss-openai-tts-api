@@ -66,7 +66,7 @@ Flagship TTS (GPU):
 ```bash
 docker run --rm -p 8000:8000 --gpus all \
   -v $PWD/voices:/voices:ro \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=tts \
   ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
 ```
@@ -76,7 +76,7 @@ Dialogue (MOSS-TTSD):
 ```bash
 docker run --rm -p 8001:8000 --gpus all \
   -v $PWD/voices:/voices:ro \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=ttsd \
   ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
 ```
@@ -85,7 +85,7 @@ Voice design (MOSS-VoiceGenerator):
 
 ```bash
 docker run --rm -p 8002:8000 --gpus all \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=voicegen \
   ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
 ```
@@ -94,7 +94,7 @@ Sound effects (MOSS-SoundEffect):
 
 ```bash
 docker run --rm -p 8003:8000 --gpus all \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=sfx \
   ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
 ```
@@ -103,12 +103,12 @@ CPU (functional verification only, see caveats):
 
 ```bash
 docker run --rm -p 8010:8000 \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=voicegen \
   ghcr.io/seancheung/moss-openai-tts-api:latest
 ```
 
-Model weights are pulled from HuggingFace on first start (≈16 GB for the 8B models, ≈3.5 GB for VoiceGenerator). Mounting `/root/.cache/huggingface` persists them across container restarts.
+Model weights are pulled from HuggingFace on first start (≈16 GB for the 8B models, ≈3.5 GB for VoiceGenerator). Mounting `/root/.cache` persists them across container restarts.
 
 > **GPU prerequisites**: NVIDIA driver + [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) on Linux. On Windows use Docker Desktop + WSL2 + NVIDIA Windows driver; no host CUDA toolkit required. 8B variants need ~24 GB VRAM at bf16; VoiceGenerator needs ~6 GB.
 

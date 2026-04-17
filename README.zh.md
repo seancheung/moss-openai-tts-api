@@ -66,7 +66,7 @@ voices/
 ```bash
 docker run --rm -p 8000:8000 --gpus all \
   -v $PWD/voices:/voices:ro \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=tts \
   ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
 ```
@@ -76,7 +76,7 @@ docker run --rm -p 8000:8000 --gpus all \
 ```bash
 docker run --rm -p 8001:8000 --gpus all \
   -v $PWD/voices:/voices:ro \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=ttsd \
   ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
 ```
@@ -85,7 +85,7 @@ docker run --rm -p 8001:8000 --gpus all \
 
 ```bash
 docker run --rm -p 8002:8000 --gpus all \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=voicegen \
   ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
 ```
@@ -94,7 +94,7 @@ docker run --rm -p 8002:8000 --gpus all \
 
 ```bash
 docker run --rm -p 8003:8000 --gpus all \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=sfx \
   ghcr.io/seancheung/moss-openai-tts-api:cuda-latest
 ```
@@ -103,12 +103,12 @@ CPU 版本（仅用于功能验证，见局限）：
 
 ```bash
 docker run --rm -p 8010:8000 \
-  -v $PWD/hf_cache:/root/.cache/huggingface \
+  -v $PWD/cache:/root/.cache \
   -e MOSS_VARIANT=voicegen \
   ghcr.io/seancheung/moss-openai-tts-api:latest
 ```
 
-首次启动从 HuggingFace 下载模型权重（8B 模型 bf16 约 16 GB，VoiceGenerator 约 3.5 GB）。挂载 `/root/.cache/huggingface` 可让权重在容器重启后复用。
+首次启动从 HuggingFace 下载模型权重（8B 模型 bf16 约 16 GB，VoiceGenerator 约 3.5 GB）。挂载 `/root/.cache` 可让权重在容器重启后复用。
 
 > **GPU 要求**：宿主机需 NVIDIA 驱动 + [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)。Windows 用 Docker Desktop + WSL2 + NVIDIA Windows 驱动。8B 模型 bf16 约需 24 GB 显存，VoiceGenerator 约 6 GB。
 
