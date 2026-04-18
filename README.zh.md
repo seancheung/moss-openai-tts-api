@@ -276,7 +276,8 @@ with client.audio.speech.with_streaming_response.create(
 | `MOSS_DEVICE` | `auto` | `auto` → 有 CUDA 则用 CUDA，否则 CPU；或 `cuda` / `cpu`。 |
 | `MOSS_CUDA_INDEX` | `0` | `cuda` / `auto` 时选择的 `cuda:N` |
 | `MOSS_DTYPE` | `auto` | `auto` → CUDA = bfloat16，CPU = float32；或 `bfloat16` / `float16` / `float32`。 |
-| `MOSS_CACHE_DIR` | — | 加载模型前写入 `HF_HOME`，同时作为 Transformers 的 `cache_dir` |
+| `MOSS_QUANTIZATION` | `none` | 可选 bitsandbytes 权重量化（仅 CUDA）：`int8`（约 ½ 显存）、`int4`（NF4 + double-quant，约 ¼ 显存）。CPU 下会自动降级为 `none`。 |
+| `MOSS_CACHE_DIR` | — | 加载模型前由 entrypoint 映射为 `HF_HOME`，从而在 transformers 导入之前生效 |
 | `MOSS_ATTN_IMPLEMENTATION` | `auto` | `auto` → CUDA SM≥80 + fp16/bf16 + 已安装 `flash_attn` 时选 `flash_attention_2`，否则 CUDA 下 `sdpa`、CPU 下 `eager`。亦可强制指定。 |
 | `MOSS_MAX_NEW_TOKENS` | `4096` | `model.generate(max_new_tokens=...)` 上限 |
 | `MOSS_N_VQ_FOR_INFERENCE` | — | MossTTSLocal 专属 RVQ 深度（1-32，常用 4/8/16/32），Delay 模型会忽略。 |
@@ -308,7 +309,7 @@ docker buildx build -f docker/Dockerfile.cpu \
 
 - **一个容器一个变体**。8B 模型无法共存，需要多个变体并存时请起多个容器（compose 示例里就是这样），再用反代合并入口。
 - **CPU 镜像用于功能验证 / 轻量使用**。8B 变体（`tts` 走默认 8B Delay、`ttsd`、`sfx`）在 CPU fp32 下约需 32 GB 内存、一句短话要几分钟。CPU 下实用的组合：`MOSS_VARIANT=tts` + `MOSS_MODEL=OpenMOSS-Team/MOSS-TTS-Local-Transformer`（1.7B Local），或 `MOSS_VARIANT=voicegen`（1.7B）。生产环境请用 CUDA 镜像。
-- **模型体积大**——8B bf16 约 16 GB，VoiceGenerator 约 3.5 GB。首次启动下载耗时，**务必**挂载 `/root/.cache/huggingface` 复用权重。
+- **模型体积大**——8B bf16 约 16 GB，VoiceGenerator 约 3.5 GB。首次启动下载耗时，**务必**挂载 `/root/.cache/huggingface` 复用权重。显存吃紧时可通过 `MOSS_QUANTIZATION=int8`（约 ½ 显存）或 `int4`（约 ¼）把 8B 模型塞进更小的 GPU；仅 CUDA 可用，bitsandbytes 已在 CUDA 镜像中预装。
 - **不内置 FlashAttention 2**。FA2 需要源码编译，CI 成本高。CUDA 镜像自动回退到 PyTorch SDPA。要启用 FA2，请在运行中的容器内 `pip install flash-attn` 并设置 `MOSS_ATTN_IMPLEMENTATION=flash_attention_2`。
 - **cuDNN SDPA 被强制关闭**。按 MOSS 上游 Quickstart 要求，在引擎初始化时执行；flash / mem-efficient / math SDPA 后端仍保留做 fallback。
 - **`speed` 字段是 no-op**：MOSS 无原生语速控制，保留该字段只为让 OpenAI Python SDK 的默认请求体（`speed=1.0`）不被 422。需要控长度请用 `tokens`，或对返回音频做后处理。

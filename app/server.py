@@ -63,6 +63,7 @@ async def healthz(request: Request) -> HealthResponse:
         variant=engine.variant,
         device=engine.device,
         dtype=engine.dtype_str,
+        quantization=engine.quantization,
         attn_implementation=engine.attn_impl,
         sample_rate=engine.sample_rate,
     )

@@ -118,5 +118,6 @@ class HealthResponse(BaseModel):
     variant: Optional[VariantName] = None
     device: Optional[str] = None
     dtype: Optional[str] = None
+    quantization: Optional[Literal["none", "int8", "int4"]] = None
     attn_implementation: Optional[str] = None
     sample_rate: Optional[int] = None

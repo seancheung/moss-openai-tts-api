@@ -11,6 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 AttnImpl = Literal["auto", "flash_attention_2", "sdpa", "eager"]
 Variant = Literal["auto", "tts", "ttsd", "voicegen", "sfx"]
+Quantization = Literal["none", "int8", "int4"]
 
 
 VARIANT_DEFAULT_MODEL: dict[str, str] = {
@@ -29,6 +30,14 @@ class Settings(BaseSettings):
     moss_device: Literal["auto", "cuda", "cpu"] = Field(default="auto")
     moss_cuda_index: int = Field(default=0)
     moss_dtype: Literal["auto", "bfloat16", "float16", "float32"] = Field(default="auto")
+    moss_quantization: Quantization = Field(
+        default="none",
+        description=(
+            "Load the backbone with bitsandbytes weight-only quantization. "
+            "`int8` halves VRAM versus bf16; `int4` uses NF4 + double-quant "
+            "and roughly quarters it. CUDA-only."
+        ),
+    )
     moss_cache_dir: Optional[str] = Field(default=None)
 
     moss_attn_implementation: AttnImpl = Field(default="auto")

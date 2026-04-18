@@ -32,6 +32,10 @@ RUN pip install --extra-index-url https://download.pytorch.org/whl/cu128 \
         "/opt/api/MOSS-TTS[torch-runtime]" && \
     pip install hf_transfer
 
+# Optional INT8 / INT4 quantization via bitsandbytes (MOSS_QUANTIZATION env).
+# accelerate is required by transformers when quantization_config is used.
+RUN pip install "bitsandbytes>=0.43" "accelerate>=1.0"
+
 COPY docker/requirements.api.txt /tmp/requirements.api.txt
 RUN pip install -r /tmp/requirements.api.txt
 

@@ -8,7 +8,7 @@ from typing import Optional
 import numpy as np
 import torch
 import torchaudio
-from transformers import AutoModel, AutoProcessor
+from transformers import AutoModel, AutoProcessor, BitsAndBytesConfig
 
 # Follow MOSS-TTS upstream guidance (README Quickstart): disable the broken
 # cuDNN SDPA backend, keep the fallbacks enabled. This must happen before any
@@ -36,11 +36,21 @@ class TTSEngine:
         if self.device.startswith("cpu") and self.dtype != torch.float32:
             log.warning("cpu device detected; overriding dtype %s -> float32", self.dtype)
             self.dtype = torch.float32
+
+        self.quantization = settings.moss_quantization
+        if self.quantization != "none" and not self.device.startswith("cuda"):
+            log.warning(
+                "bitsandbytes quantization=%s requires CUDA; falling back to none",
+                self.quantization,
+            )
+            self.quantization = "none"
+
         self.attn_impl = settings.resolved_attn_impl(self.device, self.dtype)
 
         log.info(
-            "loading MOSS variant=%s model=%s device=%s dtype=%s attn=%s",
+            "loading MOSS variant=%s model=%s device=%s dtype=%s attn=%s quant=%s",
             self.variant, self.model_id, self.device, self.dtype, self.attn_impl,
+            self.quantization,
         )
 
         # MOSS-TTS' remote-code processors reject cache_dir kwargs; the cache
@@ -52,12 +62,21 @@ class TTSEngine:
         )
         self.processor.audio_tokenizer = self.processor.audio_tokenizer.to(self.device)
 
-        self.model = AutoModel.from_pretrained(
-            self.model_id,
-            trust_remote_code=True,
-            attn_implementation=self.attn_impl,
-            torch_dtype=self.dtype,
-        ).to(self.device)
+        model_kwargs: dict = {
+            "trust_remote_code": True,
+            "attn_implementation": self.attn_impl,
+            "torch_dtype": self.dtype,
+        }
+        bnb_config = self._build_bnb_config()
+        if bnb_config is not None:
+            model_kwargs["quantization_config"] = bnb_config
+            # bitsandbytes-quantized models must not be .to()'d after load;
+            # pin the whole model to the target device via device_map instead.
+            model_kwargs["device_map"] = {"": self.device}
+
+        self.model = AutoModel.from_pretrained(self.model_id, **model_kwargs)
+        if bnb_config is None:
+            self.model = self.model.to(self.device)
         self.model.eval()
 
         self.sample_rate = int(self.processor.model_config.sampling_rate)
@@ -67,6 +86,18 @@ class TTSEngine:
     # ------------------------------------------------------------------
     # helpers
     # ------------------------------------------------------------------
+    def _build_bnb_config(self) -> Optional[BitsAndBytesConfig]:
+        if self.quantization == "int8":
+            return BitsAndBytesConfig(load_in_8bit=True)
+        if self.quantization == "int4":
+            return BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=self.dtype,
+            )
+        return None
+
     @staticmethod
     def _to_float32(audio_tensor) -> np.ndarray:
         t = audio_tensor.detach().to(dtype=torch.float32, device="cpu").contiguous()

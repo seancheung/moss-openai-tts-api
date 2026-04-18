@@ -276,7 +276,8 @@ Returns model name, active variant, device, dtype, attention implementation, sam
 | `MOSS_DEVICE` | `auto` | `auto` → CUDA if available else CPU. Or `cuda` / `cpu`. |
 | `MOSS_CUDA_INDEX` | `0` | Selects `cuda:N` when device is `cuda` or `auto` |
 | `MOSS_DTYPE` | `auto` | `auto` → CUDA = bfloat16, CPU = float32. Or `bfloat16` / `float16` / `float32`. |
-| `MOSS_CACHE_DIR` | — | Sets `HF_HOME` and the Transformers `cache_dir` before model load |
+| `MOSS_QUANTIZATION` | `none` | Optional bitsandbytes weight-only quantization (CUDA only): `int8` (≈½ VRAM), `int4` (NF4 + double-quant, ≈¼ VRAM). Silently downgrades to `none` on CPU. |
+| `MOSS_CACHE_DIR` | — | Sets `HF_HOME` before model load (mapped by entrypoint so transformers sees it at import time) |
 | `MOSS_ATTN_IMPLEMENTATION` | `auto` | `auto` → `flash_attention_2` if available (CUDA SM≥80 + fp16/bf16 + `flash_attn` installed), else `sdpa` on CUDA, else `eager`. Or force any of those. |
 | `MOSS_MAX_NEW_TOKENS` | `4096` | Upper bound for `model.generate(max_new_tokens=...)` |
 | `MOSS_N_VQ_FOR_INFERENCE` | — | MossTTSLocal-only RVQ depth (1-32, usually 4/8/16/32). Ignored by Delay models. |
@@ -308,7 +309,7 @@ docker buildx build -f docker/Dockerfile.cpu \
 
 - **One variant per container.** 8B MOSS models do not fit alongside each other; run separate containers for separate variants (the compose example does this) and route with a reverse proxy if you want a single URL.
 - **CPU image is for functional verification / light use.** The 8B variants (`tts` with the default 8B Delay model, `ttsd`, `sfx`) need ~32 GB RAM at fp32 and take minutes per short clip on CPU. Practical CPU options: `MOSS_VARIANT=tts` + `MOSS_MODEL=OpenMOSS-Team/MOSS-TTS-Local-Transformer` (1.7B Local), or `MOSS_VARIANT=voicegen` (1.7B). For production use the CUDA image.
-- **Model weights are large** — ~16 GB for 8B bf16, ~3.5 GB for VoiceGenerator. First-start downloads take a while; **always** mount `/root/.cache/huggingface`.
+- **Model weights are large** — ~16 GB for 8B bf16, ~3.5 GB for VoiceGenerator. First-start downloads take a while; **always** mount `/root/.cache/huggingface`. Set `MOSS_QUANTIZATION=int8` (≈½ VRAM) or `int4` (≈¼) to fit the 8B checkpoints on smaller GPUs; CUDA-only, bitsandbytes is pre-installed in the CUDA image.
 - **FlashAttention 2 is not bundled.** It has to be compiled from source, which is expensive on CI. The CUDA image falls back to PyTorch SDPA. To use FA2, install `flash-attn` into the running container and set `MOSS_ATTN_IMPLEMENTATION=flash_attention_2`.
 - **cuDNN SDPA is force-disabled** at engine startup, following the MOSS-TTS upstream Quickstart. The flash / mem-efficient / math SDPA backends remain enabled as fallbacks.
 - **`speed` is a no-op.** MOSS has no native speed control; the field is kept in `/v1/audio/speech` so that OpenAI's Python SDK default request body (`speed=1.0`) does not 422. Use `tokens` for length control, or post-process the returned audio.
