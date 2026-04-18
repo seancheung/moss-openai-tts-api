@@ -49,9 +49,11 @@ class Settings(BaseSettings):
     moss_audio_tokenizer_dtype: Literal["auto", "bfloat16", "float16", "float32"] = Field(
         default="auto",
         description=(
-            "Codec precision. `auto` follows the backbone dtype on CUDA and "
-            "stays in float32 on CPU. Downcasting fp32 → bf16/fp16 roughly "
-            "halves codec VRAM."
+            "Codec precision. `auto` keeps the checkpoint's original dtype "
+            "(upstream MOSS-Audio-Tokenizer has dtype-sensitive paths in its "
+            "forward, so forcing bf16/fp16 may trigger dtype-mismatch errors "
+            "at encode/decode time). If VRAM is tight, prefer "
+            "`MOSS_AUDIO_TOKENIZER_DEVICE=cpu` instead."
         ),
     )
     moss_cache_dir: Optional[str] = Field(default=None)
@@ -133,10 +135,15 @@ class Settings(BaseSettings):
         return self.moss_audio_tokenizer_device
 
     def resolved_audio_tokenizer_dtype(self, backbone_dtype, device: str):
+        """Returns a torch dtype to cast the codec to, or None to leave it alone.
+
+        `auto` keeps the checkpoint's native dtype — MOSS-Audio-Tokenizer has
+        dtype-sensitive forward paths that break on forced downcasts.
+        """
         import torch
 
         if self.moss_audio_tokenizer_dtype == "auto":
-            return backbone_dtype if device.startswith("cuda") else torch.float32
+            return None
         return {
             "bfloat16": torch.bfloat16,
             "float16": torch.float16,

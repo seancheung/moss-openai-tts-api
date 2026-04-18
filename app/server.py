@@ -66,7 +66,10 @@ async def healthz(request: Request) -> HealthResponse:
         quantization=engine.quantization,
         attn_implementation=engine.attn_impl,
         audio_tokenizer_device=engine.audio_tokenizer_device,
-        audio_tokenizer_dtype=str(engine.audio_tokenizer_dtype).replace("torch.", ""),
+        audio_tokenizer_dtype=(
+            str(engine.audio_tokenizer_dtype).replace("torch.", "")
+            if engine.audio_tokenizer_dtype is not None else "native"
+        ),
         sample_rate=engine.sample_rate,
     )
 

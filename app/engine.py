@@ -50,12 +50,21 @@ class TTSEngine:
         self.audio_tokenizer_dtype = settings.resolved_audio_tokenizer_dtype(
             self.dtype, self.audio_tokenizer_device,
         )
+        if self.audio_tokenizer_dtype is not None:
+            log.warning(
+                "forcing audio_tokenizer dtype=%s; upstream MOSS-Audio-Tokenizer has "
+                "dtype-sensitive forward paths and may raise dtype-mismatch errors. "
+                "If it fails, unset MOSS_AUDIO_TOKENIZER_DTYPE and use DEVICE=cpu "
+                "to save VRAM instead.",
+                self.audio_tokenizer_dtype,
+            )
 
         log.info(
             "loading MOSS variant=%s model=%s device=%s dtype=%s attn=%s "
             "quant=%s audio_tokenizer=%s/%s",
             self.variant, self.model_id, self.device, self.dtype, self.attn_impl,
-            self.quantization, self.audio_tokenizer_device, self.audio_tokenizer_dtype,
+            self.quantization, self.audio_tokenizer_device,
+            self.audio_tokenizer_dtype if self.audio_tokenizer_dtype is not None else "native",
         )
 
         # MOSS-TTS' remote-code processors reject cache_dir kwargs; the cache
@@ -65,9 +74,14 @@ class TTSEngine:
             self.model_id,
             trust_remote_code=True,
         )
-        self.processor.audio_tokenizer = self.processor.audio_tokenizer.to(
-            device=self.audio_tokenizer_device, dtype=self.audio_tokenizer_dtype,
-        )
+        if self.audio_tokenizer_dtype is not None:
+            self.processor.audio_tokenizer = self.processor.audio_tokenizer.to(
+                device=self.audio_tokenizer_device, dtype=self.audio_tokenizer_dtype,
+            )
+        else:
+            self.processor.audio_tokenizer = self.processor.audio_tokenizer.to(
+                device=self.audio_tokenizer_device,
+            )
 
         model_kwargs: dict = {
             "trust_remote_code": True,
