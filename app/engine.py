@@ -46,11 +46,16 @@ class TTSEngine:
             self.quantization = "none"
 
         self.attn_impl = settings.resolved_attn_impl(self.device, self.dtype)
+        self.audio_tokenizer_device = settings.resolved_audio_tokenizer_device(self.device)
+        self.audio_tokenizer_dtype = settings.resolved_audio_tokenizer_dtype(
+            self.dtype, self.audio_tokenizer_device,
+        )
 
         log.info(
-            "loading MOSS variant=%s model=%s device=%s dtype=%s attn=%s quant=%s",
+            "loading MOSS variant=%s model=%s device=%s dtype=%s attn=%s "
+            "quant=%s audio_tokenizer=%s/%s",
             self.variant, self.model_id, self.device, self.dtype, self.attn_impl,
-            self.quantization,
+            self.quantization, self.audio_tokenizer_device, self.audio_tokenizer_dtype,
         )
 
         # MOSS-TTS' remote-code processors reject cache_dir kwargs; the cache
@@ -60,7 +65,9 @@ class TTSEngine:
             self.model_id,
             trust_remote_code=True,
         )
-        self.processor.audio_tokenizer = self.processor.audio_tokenizer.to(self.device)
+        self.processor.audio_tokenizer = self.processor.audio_tokenizer.to(
+            device=self.audio_tokenizer_device, dtype=self.audio_tokenizer_dtype,
+        )
 
         model_kwargs: dict = {
             "trust_remote_code": True,

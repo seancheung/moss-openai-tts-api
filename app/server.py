@@ -65,6 +65,8 @@ async def healthz(request: Request) -> HealthResponse:
         dtype=engine.dtype_str,
         quantization=engine.quantization,
         attn_implementation=engine.attn_impl,
+        audio_tokenizer_device=engine.audio_tokenizer_device,
+        audio_tokenizer_dtype=str(engine.audio_tokenizer_dtype).replace("torch.", ""),
         sample_rate=engine.sample_rate,
     )
 

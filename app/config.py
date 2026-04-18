@@ -38,6 +38,22 @@ class Settings(BaseSettings):
             "and roughly quarters it. CUDA-only."
         ),
     )
+    moss_audio_tokenizer_device: Literal["auto", "cuda", "cpu"] = Field(
+        default="auto",
+        description=(
+            "Where to place the MOSS-Audio-Tokenizer codec. `auto` follows the "
+            "backbone; set to `cpu` to offload it (saves 1-2 GB VRAM at the "
+            "cost of extra CPU work around each request)."
+        ),
+    )
+    moss_audio_tokenizer_dtype: Literal["auto", "bfloat16", "float16", "float32"] = Field(
+        default="auto",
+        description=(
+            "Codec precision. `auto` follows the backbone dtype on CUDA and "
+            "stays in float32 on CPU. Downcasting fp32 → bf16/fp16 roughly "
+            "halves codec VRAM."
+        ),
+    )
     moss_cache_dir: Optional[str] = Field(default=None)
 
     moss_attn_implementation: AttnImpl = Field(default="auto")
@@ -108,6 +124,24 @@ class Settings(BaseSettings):
             "float16": torch.float16,
             "float32": torch.float32,
         }[self.moss_dtype]
+
+    def resolved_audio_tokenizer_device(self, backbone_device: str) -> str:
+        if self.moss_audio_tokenizer_device == "auto":
+            return backbone_device
+        if self.moss_audio_tokenizer_device == "cuda":
+            return f"cuda:{self.moss_cuda_index}"
+        return self.moss_audio_tokenizer_device
+
+    def resolved_audio_tokenizer_dtype(self, backbone_dtype, device: str):
+        import torch
+
+        if self.moss_audio_tokenizer_dtype == "auto":
+            return backbone_dtype if device.startswith("cuda") else torch.float32
+        return {
+            "bfloat16": torch.bfloat16,
+            "float16": torch.float16,
+            "float32": torch.float32,
+        }[self.moss_audio_tokenizer_dtype]
 
     def resolved_attn_impl(self, device: str, dtype) -> str:
         if self.moss_attn_implementation != "auto":

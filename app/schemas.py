@@ -120,4 +120,6 @@ class HealthResponse(BaseModel):
     dtype: Optional[str] = None
     quantization: Optional[Literal["none", "int8", "int4"]] = None
     attn_implementation: Optional[str] = None
+    audio_tokenizer_device: Optional[str] = None
+    audio_tokenizer_dtype: Optional[str] = None
     sample_rate: Optional[int] = None
